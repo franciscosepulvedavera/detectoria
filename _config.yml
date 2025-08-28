@@ -1,0 +1,16 @@
+# _config.yml
+title: Mi sitio
+# …lo que tengas…
+
+# Evitar que Jekyll procese carpetas que no son del sitio
+exclude:
+  - venv
+  - .venv
+  - node_modules
+  - .github
+  - .git
+  - .gitignore
+  - .vscode
+  - .idea
+  - __pycache__
+  - .pytest_cache
