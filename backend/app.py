@@ -1,12 +1,19 @@
 import os
+import logging
 import tempfile
 import json
 import shutil
 from flask import Flask, render_template, request, flash, jsonify
+from flask_cors import CORS
 from dotenv import load_dotenv
 import docx
 import pdfplumber
 import google.generativeai as genai
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s'
+)
 
 # Cargar variables de entorno
 load_dotenv()
@@ -14,12 +21,13 @@ load_dotenv()
 # Configurar Gemini
 api_key = os.getenv("GOOGLE_API_KEY")
 if not api_key:
-    raise ValueError("GOOGLE_API_KEY no está configurada en el archivo .env")
-
-genai.configure(api_key=api_key)
+    logging.warning("GOOGLE_API_KEY no está configurada — el análisis usará el modo fallback")
+else:
+    genai.configure(api_key=api_key)
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-key-change-in-production")
+CORS(app, origins=["chrome-extension://*"])
 
 # Configuración
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
@@ -53,25 +61,29 @@ def extraer_texto(file_path):
         elif extension.endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff')):
             texto = extraer_texto_imagen(file_path)
         else:
-            print(f"Formato no soportado: {extension}")
+            logging.warning(f"Formato no soportado: {extension}")
 
         return texto.strip()
     except Exception as e:
-        print(f"Error extrayendo texto: {e}")
+        logging.error(f"Error extrayendo texto: {e}")
         return ""
 
 
 def extraer_texto_imagen(file_path):
-    """Extrae texto de una imagen usando OCR"""
+    """Extrae texto de una imagen usando OCR (pytesseract)"""
     try:
-        print(f" Procesando imagen: {file_path}")
-
-        # Por ahora, retornamos un mensaje indicando que OCR no está disponible
-        # Para implementar OCR completo, necesitarías instalar opencv-python y pytesseract
-        return "OCR no disponible - Instala opencv-python y pytesseract para procesar imágenes"
-
+        import pytesseract
+        from PIL import Image
+        logging.info(f"Procesando imagen con OCR: {file_path}")
+        img = Image.open(file_path)
+        texto = pytesseract.image_to_string(img, lang='spa+eng')
+        logging.info(f"OCR completado: {len(texto)} caracteres extraídos")
+        return texto
+    except ImportError:
+        logging.warning("pytesseract o Pillow no está instalado. OCR no disponible.")
+        return "OCR no disponible - Instala pytesseract para procesar imágenes"
     except Exception as e:
-        print(f"❌ Error en OCR: {e}")
+        logging.error(f"Error en OCR: {e}")
         return ""
 
 
@@ -160,7 +172,7 @@ def transformar_respuesta_gemini(respuesta_gemini, texto, nivel_educativo):
         return json.dumps(resultado_completo), True, "Análisis exitoso con IA"
 
     except Exception as e:
-        print(f"❌ Error transformando respuesta: {e}")
+        logging.error(f"Error transformando respuesta: {e}")
         return json.dumps(analisis_fallback(texto, nivel_educativo)), False, f"Error transformando respuesta: {str(e)}"
 
 
@@ -218,74 +230,36 @@ def analizar_con_gemini(texto, nivel_educativo):
     """
 
     try:
-        print(f"🔍 Intentando conectar con Gemini...")
-        print(f" Longitud del texto: {len(texto)} caracteres")
-        print(f" Nivel educativo: {nivel_desc}")
+        logging.info(f"Conectando con Gemini — texto: {len(texto)} chars, nivel: {nivel_desc}")
 
         # Verificar API key
         if not api_key or api_key == "tu_api_key_aqui":
-            print("❌ API Key no configurada")
+            logging.error("API Key no configurada")
             return json.dumps(analisis_fallback(texto, nivel_educativo)), False, "API Key no configurada"
 
-        print(f"🔑 API Key configurada: {api_key[:10]}...")
-
         model = genai.GenerativeModel('gemini-1.5-flash')
-        print(f" Modelo configurado: {model}")
-
         response = model.generate_content(prompt)
-        print(f"✅ Respuesta recibida de Gemini")
-        print(f" Tipo de respuesta: {type(response)}")
-        print(f" Respuesta es None: {response is None}")
 
-        # Verificar si la respuesta es válida
         if response is None:
-            print("❌ Respuesta de Gemini es None")
+            logging.error("Gemini devolvió respuesta None")
             return json.dumps(analisis_fallback(texto, nivel_educativo)), False, "Gemini devolvió respuesta vacía"
 
         if not hasattr(response, 'text'):
-            print("❌ Respuesta no tiene atributo 'text'")
-            print(f"📝 Atributos disponibles: {dir(response)}")
+            logging.error("Respuesta de Gemini sin atributo 'text'")
             return json.dumps(analisis_fallback(texto, nivel_educativo)), False, "Respuesta de Gemini no tiene texto"
 
         response_text = response.text
-        print(
-            f"📝 Longitud de respuesta: {len(response_text) if response_text else 0} caracteres")
-        print(f" Respuesta es vacía: {response_text == ''}")
-        print(f" Respuesta es None: {response_text is None}")
-
         if not response_text or response_text.strip() == "":
-            print("❌ Respuesta de Gemini está vacía")
+            logging.error("Respuesta de Gemini está vacía")
             return json.dumps(analisis_fallback(texto, nivel_educativo)), False, "Gemini devolvió respuesta vacía"
 
-        # MOSTRAR RESPUESTA COMPLETA PARA DIAGNÓSTICO
-        print("=" * 80)
-        print(" RESPUESTA COMPLETA DE GEMINI:")
-        print("=" * 80)
-        # Usar repr() para ver caracteres especiales
-        print(repr(response_text))
-        print("=" * 80)
-        print(f"📊 Caracteres en respuesta: {len(response_text)}")
-        print(f"📊 Primeros 10 caracteres: '{response_text[:10]}'")
-        print(f"📊 Últimos 10 caracteres: '{response_text[-10:]}'")
-        print(
-            f" Respuesta contiene solo espacios: {response_text.strip() == ''}")
-        print("=" * 80)
-
-        # LIMPIAR RESPUESTA DE GEMINI
-        print("🧹 Limpiando respuesta de Gemini...")
+        logging.info(f"Respuesta de Gemini recibida: {len(response_text)} chars")
         response_text_limpia = limpiar_respuesta_gemini(response_text)
-        print(f"📝 Respuesta limpia: {repr(response_text_limpia)}")
-        print(f" Longitud respuesta limpia: {len(response_text_limpia)}")
-
-        # TRANSFORMAR RESPUESTA SIMPLE A FORMATO COMPLETO
-        print("🔄 Transformando respuesta simple a formato completo...")
         return transformar_respuesta_gemini(response_text_limpia, texto, nivel_educativo)
 
     except Exception as e:
         error_diagnostico = diagnosticar_error_gemini(e)
-        print(f"❌ Error con Gemini: {e}")
-        print(f"🔍 Diagnóstico: {error_diagnostico}")
-        print(f"🔍 Tipo de error: {type(e).__name__}")
+        logging.error(f"Error con Gemini [{type(e).__name__}]: {e} — {error_diagnostico}")
         return json.dumps(analisis_fallback(texto, nivel_educativo)), False, error_diagnostico
 
 
@@ -354,6 +328,11 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok", "version": "1.0"})
+
+
 @app.route("/test", methods=["GET"])
 def test():
     """Ruta de prueba para verificar que el servidor funciona"""
@@ -363,55 +342,44 @@ def test():
 @app.route("/analizar", methods=["POST"])
 def analizar():
     """Endpoint AJAX para análisis de archivos"""
-    print("=== INICIO DE ANÁLISIS ===")
-    print(f"Método: {request.method}")
-    print(f"URL: {request.url}")
-    print(f"Headers: {dict(request.headers)}")
+    logging.info(f"Inicio de análisis — {request.method} {request.url}")
 
     try:
         file = request.files.get("file")
         nivel = request.form.get("nivel")
 
-        print(f"Archivo recibido: {file.filename if file else 'None'}")
-        print(f"Nivel educativo: {nivel}")
+        logging.info(f"Archivo: {file.filename if file else 'None'}, nivel: {nivel}")
 
         if not file or file.filename == "":
-            print("Error: No se seleccionó ningún archivo")
             return jsonify({"error": "No se seleccionó ningún archivo"}), 400
 
         if not nivel:
-            print("Error: No se seleccionó nivel educativo")
             return jsonify({"error": "Por favor selecciona un nivel educativo"}), 400
 
         if not allowed_file(file.filename):
-            print(f"Error: Tipo de archivo no permitido - {file.filename}")
             return jsonify({"error": "Tipo de archivo no permitido. Use .txt, .docx, .pdf, .jpg, .png"}), 400
 
         # Verificar tamaño del archivo
         file.seek(0, 2)
         file_size = file.tell()
         file.seek(0)
-        print(f"Tamaño del archivo: {file_size} bytes")
+        logging.info(f"Tamaño del archivo: {file_size} bytes")
 
         if file_size > MAX_FILE_SIZE:
-            print("Error: Archivo demasiado grande")
             return jsonify({"error": "Archivo demasiado grande. Máximo 10MB"}), 400
 
         # Procesar archivo
         temp_file = None
         try:
-            # Crear archivo temporal
             temp_file = tempfile.NamedTemporaryFile(
                 delete=False, suffix=os.path.splitext(file.filename)[1])
             file.save(temp_file.name)
-            print(f"Archivo temporal creado: {temp_file.name}")
 
-            # Extraer texto
             texto = extraer_texto(temp_file.name)
-            print(f"Texto extraído: {len(texto)} caracteres")
+            logging.info(f"Texto extraído: {len(texto)} caracteres")
 
             if not texto:
-                print("Error: No se pudo extraer texto")
+                logging.warning("No se pudo extraer texto del documento")
                 return jsonify({
                     "porcentaje": 0,
                     "color": "gray",
@@ -423,24 +391,17 @@ def analizar():
                     "error_info": "No se pudo extraer texto del documento"
                 })
 
-            # Analizar con Gemini + fallback
-            print(f"Iniciando análisis con Gemini para nivel: {nivel}")
-            resultado, analizado_con_ia, error_info = analizar_con_gemini(
-                texto, nivel)
-            print(f"Análisis completado. Usando IA: {analizado_con_ia}")
-            print(f"Información de error: {error_info}")
+            resultado, analizado_con_ia, error_info = analizar_con_gemini(texto, nivel)
+            logging.info(f"Análisis completado — IA: {analizado_con_ia}, info: {error_info}")
 
-            # Siempre intentar parsear JSON
             try:
                 data = json.loads(resultado)
-                print("JSON parseado correctamente")
             except json.JSONDecodeError:
-                print("Error parseando JSON, usando fallback")
+                logging.error("Error parseando JSON de Gemini, usando fallback")
                 data = analisis_fallback(texto, nivel)
                 analizado_con_ia = False
                 error_info = "Error parseando respuesta de IA"
 
-            # Procesar resultados
             porcentaje = data.get("porcentaje", 50)
             label = data.get("label", "medio")
             color = data.get("color", "gray")
@@ -460,23 +421,21 @@ def analizar():
                 "densidad_vocabulario": data.get("densidad_vocabulario", 0)
             }
 
-            print(f"Resultado final: {resultado_final}")
             return jsonify(resultado_final)
 
         except Exception as e:
-            print(f"Error procesando archivo: {str(e)}")
+            logging.error(f"Error procesando archivo: {e}")
             return jsonify({"error": f"Error procesando archivo: {str(e)}"}), 500
 
         finally:
-            # Limpiar archivo temporal
             if temp_file and os.path.exists(temp_file.name):
                 os.unlink(temp_file.name)
-                print(f"Archivo temporal eliminado: {temp_file.name}")
 
     except Exception as e:
-        print(f"Error inesperado: {str(e)}")
+        logging.error(f"Error inesperado: {e}")
         return jsonify({"error": f"Error inesperado: {str(e)}"}), 500
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)

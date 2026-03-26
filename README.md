@@ -1,120 +1,140 @@
-## Detector de IA para trabajos de estudiantes
+# DetectorIA
 
-Aplicación web en Flask que analiza documentos de estudiantes y estima el nivel de probabilidad de que hayan sido generados con IA. Usa la API de Google Gemini cuando hay clave configurada y, en caso de error o falta de clave, realiza un análisis automático de respaldo (fallback).
+Herramienta para profesores chilenos que detecta si un trabajo de estudiante fue generado con IA. Combina un backend Flask (análisis con Google Gemini) y una extensión de Chrome (análisis local con Groq), ambos con soporte para PDF, DOCX, TXT e imágenes.
 
-### Características
-- **Subida de archivos** por arrastre o selección manual.
-- **Formatos soportados**: `.txt`, `.docx`, `.pdf`, `.jpg`, `.jpeg`, `.png`, `.bmp`, `.tiff`.
-- **Selector de nivel educativo** para contextualizar el análisis (básica, media, superior).
-- **Análisis con IA (Gemini)** cuando hay `GOOGLE_API_KEY` válida.
-- **Fallback automático** si falla la IA (reglas simples sobre longitud, puntuación, repetición, vocabulario).
-- **Resultados en tiempo real** vía endpoint JSON: porcentaje, color/label, indicadores, preguntas de validación y métricas básicas.
+---
+
+## Qué es DetectorIA
+
+DetectorIA analiza textos de estudiantes y estima la probabilidad de que hayan sido generados por IA, contextualizando el análisis según el nivel educativo del estudiante (1° Básico hasta universitario). Puede usarse de dos formas:
+
+- **Extensión Chrome** — sin servidor, analiza directamente en el navegador usando la API de Groq (Llama, Gemma).
+- **Backend Flask** — servidor propio desplegado en Render.com, analiza usando Google Gemini con fallback heurístico.
+- **Modo híbrido** — la extensión puede conectarse al backend si se configura la URL del servidor.
+
+---
+
+## Estructura del proyecto
+
+```
+detectoria/
+├── .gitignore
+├── .env.example
+├── README.md
+├── Procfile                  ← arranque para Render.com
+├── render.yaml               ← configuración de deploy
+├── requirements.txt          ← dependencias Python
+│
+├── backend/                  ← servidor Flask
+│   ├── app.py
+│   └── templates/
+│       ├── index.html
+│       └── result.html
+│
+└── extension/                ← extensión Chrome
+    ├── manifest.json
+    ├── assets/               ← íconos
+    └── src/
+        ├── popup.html / popup.js
+        ├── options.html / options.js
+        ├── background.js
+        └── styles.css
+```
+
+---
+
+## Cómo correr el backend (Flask)
 
 ### Requisitos
-- Python 3.11
-- Dependencias listadas en `requirements.txt`
+- Python 3.11+
+- Tesseract instalado en el sistema (opcional, para OCR de imágenes)
 
-### Instalación
-1. Crear y activar un entorno virtual (opcional pero recomendado):
+### Instalación local
+
 ```bash
+# 1. Crear entorno virtual
 python3 -m venv venv
-source venv/bin/activate
-```
-2. Instalar dependencias:
-```bash
+source venv/bin/activate          # Windows: venv\Scripts\activate
+
+# 2. Instalar dependencias
 pip install -r requirements.txt
+
+# 3. Configurar variables de entorno
+cp .env.example .env
+# Edita .env y agrega tu GOOGLE_API_KEY
+
+# 4. Correr el servidor
+python backend/app.py
+# → http://127.0.0.1:5000
 ```
 
-### Variables de entorno
-Crear un archivo `.env` en la raíz del proyecto con:
-```
-GOOGLE_API_KEY=tu_api_key_de_google_ai
-SECRET_KEY=una_clave_secreta_para_flask
-```
-- `GOOGLE_API_KEY`: Necesaria para usar Gemini. Si falta o es inválida, la app usa el análisis de fallback.
-- `SECRET_KEY`: Para sesiones/flash en Flask; en producción usar un valor robusto.
+### Endpoints disponibles
 
-### Ejecutar la aplicación
-```bash
-python app.py
-```
-Luego abrir en el navegador: `http://127.0.0.1:5000/`
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/` | Interfaz web |
+| `GET` | `/health` | Health check → `{"status":"ok","version":"1.0"}` |
+| `POST` | `/analizar` | Recibe `file` + `nivel`, devuelve JSON de análisis |
 
-Rutas principales:
-- `GET /` — Interfaz web para subir y analizar documentos.
-- `GET /test` — Prueba de salud del servidor: devuelve `{ "message": "Servidor funcionando correctamente" }`.
-- `POST /analizar` — Endpoint AJAX que recibe archivo y nivel educativo, y devuelve JSON con el análisis.
+### Ejemplo con curl
 
-### Uso desde la interfaz
-1. Abrir la página principal.
-2. Arrastrar o seleccionar un archivo soportado.
-3. Elegir el nivel educativo.
-4. Pulsar "Analizar Documento" y esperar el resultado.
-
-### Uso del endpoint `/analizar` con curl
 ```bash
 curl -X POST \
-  -F "file=@/ruta/a/tu_archivo.docx" \
+  -F "file=@trabajo.docx" \
   -F "nivel=medio-3-4" \
   http://127.0.0.1:5000/analizar | jq .
 ```
 
-Valores permitidos para `nivel`:
-- `basica-1-4`
-- `basica-5-8`
-- `medio-1-2`
-- `medio-3-4`
-- `superior`
+Valores para `nivel`: `basica-1-4` · `basica-5-8` · `medio-1-2` · `medio-3-4` · `superior`
 
-Respuesta JSON (ejemplo):
-```json
-{
-  "porcentaje": 72,
-  "color": "yellow",
-  "label": "Medio",
-  "indicadores": ["Vocabulario avanzado para la edad", "Estructura muy regular"],
-  "preguntas": ["¿Puedes explicar con tus propias palabras?"],
-  "filename": "trabajo.pdf",
-  "analizado_con_ia": true,
-  "nivel_educativo": "medio-3-4",
-  "error_info": "Análisis exitoso con IA",
-  "longitud_texto": 2450,
-  "palabras_unicas": 620,
-  "densidad_vocabulario": 25.3
-}
+### Deploy en Render.com
+
+1. Sube el proyecto a GitHub
+2. En Render → **New Web Service** → conecta el repo
+3. Render detecta `render.yaml` automáticamente
+4. En **Environment Variables** agrega `GOOGLE_API_KEY` con tu valor real
+5. Deploy — la URL resultante es la que configuras en la extensión
+
+---
+
+## Cómo instalar la extensión Chrome
+
+1. Abre Chrome y ve a `chrome://extensions`
+2. Activa **Modo desarrollador** (esquina superior derecha)
+3. Haz clic en **Cargar descomprimida**
+4. Selecciona la carpeta `extension/` de este proyecto
+5. La extensión aparece en la barra de herramientas
+
+### Configuración inicial
+
+Al instalar por primera vez se abre automáticamente la página de opciones. Ahí configuras:
+
+- **API Key de Groq** — para análisis local sin servidor. Obtén tu clave gratuita en [console.groq.com/keys](https://console.groq.com/keys)
+- **URL del servidor (opcional)** — si tienes el backend Flask desplegado, pega la URL aquí (ej: `https://detectoria-backend.onrender.com`). Si se configura, el análisis usará Gemini vía servidor en vez de Groq.
+
+### Formatos soportados por la extensión
+
+PDF · DOCX · TXT · PNG · JPG · JPEG
+
+---
+
+## Variables de entorno necesarias
+
+Copia `.env.example` a `.env` y completa los valores:
+
+```bash
+cp .env.example .env
 ```
 
-### Notas sobre OCR (imágenes)
-- La función de OCR está stub/placeholder en `app.py` y devuelve un mensaje indicando que no está disponible.
-- Para OCR real, instalar y configurar:
-  - `opencv-python` y `pytesseract` (ya listados en `requirements.txt`).
-  - Tesseract en el sistema operativo y su ruta accesible por `pytesseract`.
+| Variable | Descripción | Requerida |
+|----------|-------------|-----------|
+| `GOOGLE_API_KEY` | API key de Google AI (Gemini) | Sí, para el backend |
+| `SECRET_KEY` | Clave secreta de Flask (sesiones) | Recomendada en producción |
 
-### Límites y validaciones
-- Tamaño máximo de archivo: 10 MB.
-- Validación de extensiones y tamaño antes de procesar.
-- Si no se puede extraer texto, se retorna un JSON con `error` o indicadores informando el problema.
+La extensión Chrome **no usa** estas variables de entorno — su API key de Groq se guarda en `chrome.storage.sync` a través de la página de opciones.
 
-### Estructura del proyecto
-```
-app.py
-templates/
-  ├─ index.html     # Interfaz principal (drag & drop, selector de nivel, resultados)
-  └─ result.html    # Plantilla alternativa de resultados
-requirements.txt
-README.md
-```
+---
 
-### Despliegue
-- Configurar variables de entorno en el servidor (incluida `GOOGLE_API_KEY`).
-- Ejecutar con un WSGI como `gunicorn` detrás de un servidor web (Nginx/Apache) para producción.
-- Desactivar `debug=True` en producción.
+## Licencia
 
-### Solución de problemas
-- "GOOGLE_API_KEY no está configurada": crear `.env` con la clave válida.
-- Errores 401/403/limites de cuota: revisar el panel de Google AI y la facturación.
-- PDFs escaneados sin texto: requieren OCR; ver sección de OCR.
-- Respuestas inesperadas de Gemini: la app limpia y transforma la salida, y hace fallback si el JSON no es parseable.
-
-### Licencia
-Este proyecto se distribuye con fines educativos. Ajusta la licencia según tus necesidades.
+Proyecto educativo. Ajusta la licencia según tus necesidades.

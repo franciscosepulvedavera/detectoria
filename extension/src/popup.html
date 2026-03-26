@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>DetectorIA</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+
+    <header>
+      <span class="logo">🔍</span>
+      <h1>DetectorIA</h1>
+      <button class="btn-icon" id="openOptions" title="Configurar API Key">⚙️</button>
+    </header>
+
+    <div id="apiKeyBanner" class="api-key-banner" hidden>
+      <span>⚠️ Configura tu API Key de Groq para comenzar</span>
+      <button id="bannerOpenOptions">Ir a Opciones</button>
+    </div>
+
+    <section class="section">
+      <label class="label" for="level">Nivel educativo del estudiante</label>
+      <select id="level">
+        <option value="">— Selecciona el nivel —</option>
+        <optgroup label="Educación Básica">
+          <option>1° Básico</option>
+          <option>2° Básico</option>
+          <option>3° Básico</option>
+          <option>4° Básico</option>
+          <option>5° Básico</option>
+          <option>6° Básico</option>
+          <option>7° Básico</option>
+          <option>8° Básico</option>
+        </optgroup>
+        <optgroup label="Educación Media">
+          <option>1° Medio</option>
+          <option>2° Medio</option>
+          <option>3° Medio</option>
+          <option>4° Medio</option>
+        </optgroup>
+        <optgroup label="Educación Superior">
+          <option>CFT Centro de Formación Técnica</option>
+          <option>IP Instituto Profesional</option>
+          <option>Universitario</option>
+        </optgroup>
+      </select>
+    </section>
+
+    <section class="section">
+      <label class="label">Documento del estudiante</label>
+      <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Zona para arrastrar archivo">
+        <span class="dz-icon">📄</span>
+        <span class="dz-text">Arrastra aquí o haz clic para seleccionar</span>
+        <span class="dz-types">PDF · DOCX · TXT · PNG · JPG</span>
+        <input id="fileInput" type="file" accept=".txt,.pdf,.docx,.png,.jpg,.jpeg" hidden />
+      </div>
+      <div id="fileMeta" class="file-meta" hidden></div>
+    </section>
+
+    <div class="section-btn">
+      <button id="analyzeBtn" class="btn-analyze" disabled>Analizar documento</button>
+    </div>
+
+    <div id="status" class="status" hidden></div>
+
+    <div id="results" class="results" hidden>
+      <div id="scoreBox" class="score-box">
+        <span id="scoreNumber">0%</span>
+        <span id="riskLabel">—</span>
+        <span id="isAiLabel">—</span>
+      </div>
+      <div id="details" class="details"></div>
+    </div>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

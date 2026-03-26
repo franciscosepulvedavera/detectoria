@@ -1,5 +1,31 @@
-# .gitignore
+# ── Python ──────────────────────────────
 venv/
 .venv/
 __pycache__/
 *.pyc
+*.pyo
+
+# ── Variables de entorno ─────────────────
+.env
+.env.local
+
+# ── Chrome Extension ─────────────────────
+extension/src/config.js
+*.crx
+*.pem
+*.zip
+
+# ── macOS ────────────────────────────────
+.DS_Store
+.AppleDouble
+
+# ── Editores ─────────────────────────────
+.vscode/
+.idea/
+*.swp
+
+# ── Claude Code (worktrees internos) ─────
+.claude/
+
+# ── Misc ─────────────────────────────────
+node_modules/
