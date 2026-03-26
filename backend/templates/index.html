@@ -1,667 +1,373 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detector de IA - Profe</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DetectorIA</title>
+  <style>
+    /* ── Variables (mismo sistema que la extensión) ─────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
+    :root {
+      --primary:       #4f46e5;
+      --primary-light: #eef2ff;
+      --text:          #1e293b;
+      --muted:         #64748b;
+      --border:        #e2e8f0;
+      --bg:            #ffffff;
+      --subtle:        #f8fafc;
+      --low:           #16a34a;
+      --low-bg:        #dcfce7;
+      --med:           #d97706;
+      --med-bg:        #fef3c7;
+      --high:          #dc2626;
+      --high-bg:       #fee2e2;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      color: var(--text);
+    }
 
-        .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            padding: 40px;
-            max-width: 700px;
-            width: 100%;
-            text-align: center;
-        }
+    /* ── Layout de página ───────────────────────────────────── */
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 32px 16px;
+    }
 
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-            font-weight: 300;
-        }
+    .app {
+      background: var(--bg);
+      border-radius: 16px;
+      box-shadow: 0 24px 48px rgba(0,0,0,.18);
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
 
-        .upload-area {
-            border: 3px dashed #ddd;
-            border-radius: 15px;
-            padding: 40px;
-            margin: 20px 0;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
+    /* ── Header ─────────────────────────────────────────────── */
+    header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo { font-size: 20px; }
+    h1 { font-size: 16px; font-weight: 700; color: var(--primary); flex: 1; }
 
-        .upload-area:hover {
-            border-color: #667eea;
-            background-color: #f8f9ff;
-        }
+    /* ── Sections ────────────────────────────────────────────── */
+    .section { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+    .label {
+      display: block; font-size: 11px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 7px;
+    }
 
-        .upload-area.dragover {
-            border-color: #667eea;
-            background-color: #f0f4ff;
-            transform: scale(1.02);
-        }
+    /* ── Select ─────────────────────────────────────────────── */
+    select {
+      width: 100%; padding: 8px 28px 8px 10px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      background: var(--bg); color: var(--text); font-size: 13px;
+      cursor: pointer; outline: none; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+    select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,.12); }
 
-        .file-input {
-            display: none;
-        }
+    /* ── Dropzone ────────────────────────────────────────────── */
+    .dropzone {
+      border: 2px dashed var(--border); border-radius: 10px;
+      padding: 20px 16px; text-align: center; cursor: pointer;
+      transition: all .15s; background: var(--subtle);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .dropzone:hover, .dropzone.drag {
+      border-color: var(--primary); background: var(--primary-light);
+    }
+    .dz-icon  { font-size: 30px; }
+    .dz-text  { font-weight: 600; color: var(--text); font-size: 13px; }
+    .dz-types { font-size: 11px; color: var(--muted); }
 
-        .upload-text {
-            font-size: 1.2em;
-            color: #666;
-            margin-bottom: 15px;
-        }
+    .file-meta {
+      margin-top: 8px; padding: 6px 10px;
+      background: var(--primary-light); border-radius: 6px;
+      font-size: 12px; color: var(--primary); font-weight: 500;
+      display: none;
+    }
 
-        .file-types {
-            font-size: 0.9em;
-            color: #999;
-        }
+    /* ── Botón analizar ──────────────────────────────────────── */
+    .section-btn { padding: 12px 16px; }
+    .btn-analyze {
+      width: 100%; padding: 12px; background: var(--primary); color: white;
+      border: none; border-radius: 10px; font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: background .15s; letter-spacing: .01em;
+    }
+    .btn-analyze:hover:not(:disabled) { background: #4338ca; }
+    .btn-analyze:disabled { opacity: .45; cursor: not-allowed; }
 
-        /* Nivel educativo styles */
-        .level-selector {
-            margin: 30px 0;
-            text-align: left;
-        }
+    /* ── Status ──────────────────────────────────────────────── */
+    .status {
+      margin: 0 16px 8px; padding: 10px 12px;
+      border-radius: 8px; font-size: 13px; display: none;
+    }
+    .status.error   { background: var(--high-bg); color: var(--high); display: block; }
+    .status.loading { background: var(--primary-light); color: var(--primary); display: block; }
+    .status.info    { background: var(--low-bg); color: var(--low); font-size: 12px; display: block; }
 
-        .level-selector h3 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-        }
+    /* ── Resultados ──────────────────────────────────────────── */
+    .results { padding: 0 16px 16px; display: none; }
 
-        .level-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
+    .score-box {
+      text-align: center; padding: 18px 16px 14px;
+      border-radius: 12px; margin-bottom: 12px; border: 2px solid transparent;
+    }
+    .score-box.risk-low  { background: var(--low-bg);  border-color: var(--low); }
+    .score-box.risk-med  { background: var(--med-bg);  border-color: var(--med); }
+    .score-box.risk-high { background: var(--high-bg); border-color: var(--high); }
 
-        .level-option {
-            background: #f8f9fa;
-            border: 2px solid #e9ecef;
-            border-radius: 10px;
-            padding: 15px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: center;
-        }
+    #scoreNumber { display: block; font-size: 52px; font-weight: 900; line-height: 1; }
+    .risk-low  #scoreNumber { color: var(--low); }
+    .risk-med  #scoreNumber { color: var(--med); }
+    .risk-high #scoreNumber { color: var(--high); }
 
-        .level-option:hover {
-            border-color: #667eea;
-            background-color: #f0f4ff;
-        }
+    #riskLabel  { display: block; font-size: 13px; font-weight: 700; margin-top: 4px; opacity: .7; }
+    #isAiLabel  { display: block; font-size: 13px; font-weight: 500; margin-top: 6px; }
 
-        .level-option.selected {
-            border-color: #667eea;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
+    /* ── Cards de detalle ────────────────────────────────────── */
+    .details { display: flex; flex-direction: column; gap: 8px; }
 
-        .level-option .level-name {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
+    .card { background: var(--subtle); border-radius: 9px; padding: 10px 12px; }
+    .card-title {
+      font-size: 11px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 5px;
+    }
+    .card p { font-size: 13px; line-height: 1.55; color: var(--text); }
+    .card .q-item {
+      font-size: 13px; padding: 5px 0;
+      border-bottom: 1px solid var(--border); color: var(--text);
+    }
+    .card .q-item:last-child { border-bottom: none; }
 
-        .level-option .level-description {
-            font-size: 0.9em;
-            opacity: 0.8;
-        }
-
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 25px;
-            font-size: 1.1em;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 10px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* Loading Styles */
-        .loading {
-            display: none;
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        .loading-text {
-            color: #666;
-            font-size: 1.1em;
-        }
-
-        /* Result Styles */
-        .result {
-            display: none;
-            margin-top: 30px;
-            padding: 20px;
-            border-radius: 15px;
-            background: #f8f9fa;
-        }
-
-        .result-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-
-        .filename {
-            font-weight: bold;
-            color: #333;
-        }
-
-        .ai-badge {
-            background: #28a745;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 0.8em;
-        }
-
-        .ai-badge.fallback {
-            background: #ffc107;
-            color: #333;
-        }
-
-        .percentage-circle {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5em;
-            font-weight: bold;
-            color: white;
-            margin: 0 auto 20px;
-        }
-
-        .analysis-type {
-            background: #e3f2fd;
-            border: 1px solid #2196f3;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 20px 0;
-            text-align: center;
-        }
-
-        .analysis-type.ai {
-            background: #e8f5e8;
-            border-color: #4caf50;
-        }
-
-        .analysis-type.fallback {
-            background: #fff3cd;
-            border-color: #ffc107;
-        }
-
-        .analysis-type h4 {
-            margin-bottom: 5px;
-            font-size: 1.1em;
-        }
-
-        .analysis-type p {
-            font-size: 0.9em;
-            opacity: 0.8;
-        }
-
-        .indicators {
-            text-align: left;
-            margin: 20px 0;
-        }
-
-        .indicators h3 {
-            color: #333;
-            margin-bottom: 15px;
-        }
-
-        .indicator-category {
-            margin-bottom: 20px;
-        }
-
-        .indicator-category h4 {
-            color: #667eea;
-            margin-bottom: 10px;
-            font-size: 1.1em;
-        }
-
-        .indicator-list {
-            list-style: none;
-        }
-
-        .indicator-list li {
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-            color: #666;
-        }
-
-        .indicator-list li:before {
-            content: "•";
-            color: #667eea;
-            font-weight: bold;
-            margin-right: 10px;
-        }
-
-        .questions {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 20px;
-        }
-
-        .questions h3 {
-            color: #333;
-            margin-bottom: 15px;
-        }
-
-        .question-list {
-            list-style: none;
-        }
-
-        .question-list li {
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-            color: #666;
-        }
-
-        .question-list li:before {
-            content: "❓";
-            margin-right: 10px;
-        }
-
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px 0;
-            border: 1px solid #f5c6cb;
-        }
-
-        .success {
-            background: #d4edda;
-            color: #155724;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px 0;
-            border: 1px solid #c3e6cb;
-        }
-
-        .selected-level-info {
-            background: #e3f2fd;
-            border: 1px solid #2196f3;
-            border-radius: 10px;
-            padding: 10px;
-            margin: 10px 0;
-            color: #1976d2;
-            font-weight: bold;
-        }
-    </style>
+    .meta-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 12px; background: var(--subtle); border-radius: 8px; font-size: 13px;
+    }
+    .meta-key { color: var(--muted); }
+    .meta-val { font-weight: 700; }
+  </style>
 </head>
-
 <body>
-    <div class="container">
-        <h1> Detector de IA</h1>
+  <div class="app">
 
-        <div class="upload-area" id="uploadArea">
-            <div class="upload-text">📁 Arrastra tu archivo aquí o haz clic para seleccionar</div>
-            <div class="file-types">Formatos soportados: .txt, .docx, .pdf, .jpg, .png, .bmp</div>
-            <input type="file" id="fileInput" class="file-input" accept=".txt,.docx,.pdf,.jpg,.jpeg,.png,.bmp,.tiff">
-        </div>
+    <header>
+      <span class="logo">🔍</span>
+      <h1>DetectorIA</h1>
+    </header>
 
-        <!-- Selector de nivel educativo -->
-        <div class="level-selector" id="levelSelector" style="display: none;">
-            <h3>📚 Selecciona el nivel educativo del estudiante:</h3>
-            <div class="level-grid">
-                <div class="level-option" data-level="basica-1-4">
-                    <div class="level-name">Básica 1°-4°</div>
-                    <div class="level-description">Educación básica inicial</div>
-                </div>
-                <div class="level-option" data-level="basica-5-8">
-                    <div class="level-name">Básica 5°-8°</div>
-                    <div class="level-description">Educación básica media</div>
-                </div>
-                <div class="level-option" data-level="medio-1-2">
-                    <div class="level-name">Medio 1°-2°</div>
-                    <div class="level-description">Educación media</div>
-                </div>
-                <div class="level-option" data-level="medio-3-4">
-                    <div class="level-name">Medio 3°-4°</div>
-                    <div class="level-description">Educación media superior</div>
-                </div>
-                <div class="level-option" data-level="superior">
-                    <div class="level-name">Superior</div>
-                    <div class="level-description">Educación universitaria</div>
-                </div>
-            </div>
-            <div class="selected-level-info" id="selectedLevelInfo" style="display: none;"></div>
-        </div>
+    <!-- Selector de nivel educativo (idéntico a la extensión) -->
+    <section class="section">
+      <label class="label" for="level">Nivel educativo del estudiante</label>
+      <select id="level">
+        <option value="">— Selecciona el nivel —</option>
+        <optgroup label="Educación Básica">
+          <option value="basica-1-4">1° Básico</option>
+          <option value="basica-1-4">2° Básico</option>
+          <option value="basica-1-4">3° Básico</option>
+          <option value="basica-1-4">4° Básico</option>
+          <option value="basica-5-8">5° Básico</option>
+          <option value="basica-5-8">6° Básico</option>
+          <option value="basica-5-8">7° Básico</option>
+          <option value="basica-5-8">8° Básico</option>
+        </optgroup>
+        <optgroup label="Educación Media">
+          <option value="medio-1-2">1° Medio</option>
+          <option value="medio-1-2">2° Medio</option>
+          <option value="medio-3-4">3° Medio</option>
+          <option value="medio-3-4">4° Medio</option>
+        </optgroup>
+        <optgroup label="Educación Superior">
+          <option value="superior">CFT Centro de Formación Técnica</option>
+          <option value="superior">IP Instituto Profesional</option>
+          <option value="superior">Universitario</option>
+        </optgroup>
+      </select>
+    </section>
 
-        <button class="btn" id="analyzeBtn" style="display: none;" type="button"> Analizar Documento</button>
+    <!-- Dropzone -->
+    <section class="section">
+      <label class="label">Documento del estudiante</label>
+      <div id="dropzone" class="dropzone">
+        <span class="dz-icon">📄</span>
+        <span class="dz-text">Arrastra aquí o haz clic para seleccionar</span>
+        <span class="dz-types">PDF · DOCX · TXT · PNG · JPG</span>
+        <input id="fileInput" type="file" accept=".txt,.pdf,.docx,.png,.jpg,.jpeg" hidden />
+      </div>
+      <div id="fileMeta" class="file-meta"></div>
+    </section>
 
-        <!-- Loading -->
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <div class="loading-text">🤖 Analizando documento con IA...</div>
-        </div>
-
-        <!-- Result -->
-        <div class="result" id="result">
-            <div class="result-header">
-                <div class="filename" id="filename"></div>
-                <div class="ai-badge" id="aiBadge">IA</div>
-            </div>
-
-            <div class="percentage-circle" id="percentageCircle">
-                0%
-            </div>
-
-            <!-- Tipo de análisis -->
-            <div class="analysis-type" id="analysisType">
-                <h4 id="analysisTypeTitle">Tipo de Análisis</h4>
-                <p id="analysisTypeDescription">Descripción del análisis realizado</p>
-                <div id="errorDetails"
-                    style="display: none; margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 5px; border-left: 4px solid #ffc107;">
-                    <strong>🔍 Diagnóstico del Error:</strong>
-                    <p id="errorMessage" style="margin: 5px 0 0 0; font-size: 0.9em;"></p>
-                </div>
-            </div>
-
-            <div class="indicators">
-                <h3> Indicadores Detectados:</h3>
-
-                <div class="indicator-category">
-                    <h4>🔍 Indicadores de IA Detectados:</h4>
-                    <ul class="indicator-list" id="indicators">
-                    </ul>
-                </div>
-
-                <div class="indicator-category">
-                    <h4>📊 Métricas Analizadas:</h4>
-                    <ul class="indicator-list" id="metrics">
-                    </ul>
-                </div>
-            </div>
-
-            <div class="questions">
-                <h3>❓ Preguntas de Validación:</h3>
-                <ul class="question-list" id="questions">
-                </ul>
-            </div>
-        </div>
+    <!-- Botón -->
+    <div class="section-btn">
+      <button id="analyzeBtn" class="btn-analyze" disabled>Analizar documento</button>
     </div>
 
-    <script>
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const analyzeBtn = document.getElementById('analyzeBtn');
-        const loading = document.getElementById('loading');
-        const result = document.getElementById('result');
-        const filename = document.getElementById('filename');
-        const aiBadge = document.getElementById('aiBadge');
-        const percentageCircle = document.getElementById('percentageCircle');
-        const indicators = document.getElementById('indicators');
-        const questions = document.getElementById('questions');
-        const levelSelector = document.getElementById('levelSelector');
-        const selectedLevelInfo = document.getElementById('selectedLevelInfo');
-        const analysisType = document.getElementById('analysisType');
-        const analysisTypeTitle = document.getElementById('analysisTypeTitle');
-        const analysisTypeDescription = document.getElementById('analysisTypeDescription');
-        const metrics = document.getElementById('metrics');
-        const errorDetails = document.getElementById('errorDetails');
-        const errorMessage = document.getElementById('errorMessage');
+    <!-- Status -->
+    <div id="status" class="status"></div>
 
+    <!-- Resultados -->
+    <div id="results" class="results">
+      <div id="scoreBox" class="score-box">
+        <span id="scoreNumber">0%</span>
+        <span id="riskLabel">—</span>
+        <span id="isAiLabel">—</span>
+      </div>
+      <div id="details" class="details"></div>
+    </div>
 
-        let selectedFile = null;
-        let selectedLevel = null;
+  </div>
 
-        // Drag and drop functionality
-        uploadArea.addEventListener('click', () => fileInput.click());
+  <script>
+    const $ = id => document.getElementById(id);
+    let selectedFile = null;
 
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
+    // ── Dropzone ──────────────────────────────────────────────
+    const dropzone  = $('dropzone');
+    const fileInput = $('fileInput');
 
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover',  e => { e.preventDefault(); dropzone.classList.add('drag'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('drag');
+      handleFile(e.dataTransfer?.files?.[0]);
+    });
+    fileInput.addEventListener('change', () => handleFile(fileInput.files?.[0]));
 
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleFileSelect(files[0]);
-            }
-        });
+    function handleFile(file) {
+      if (!file) return;
+      const ALLOWED = ['.txt', '.pdf', '.docx', '.png', '.jpg', '.jpeg'];
+      const ext = (file.name.toLowerCase().match(/\.[^.]+$/) || [''])[0];
+      if (!ALLOWED.includes(ext)) { showStatus('Formato no soportado. Usa PDF, DOCX, TXT, PNG o JPG.', 'error'); return; }
+      if (file.size > 15 * 1024 * 1024) { showStatus('El archivo supera 15 MB.', 'error'); return; }
+      selectedFile = file;
+      $('fileMeta').textContent = file.name + '  (' + fmtSize(file.size) + ')';
+      $('fileMeta').style.display = 'block';
+      $('results').style.display = 'none';
+      hideStatus();
+      updateBtn();
+    }
 
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                handleFileSelect(e.target.files[0]);
-            }
-        });
+    // ── Habilitar botón solo si hay archivo Y nivel ───────────
+    $('level').addEventListener('change', updateBtn);
+    function updateBtn() {
+      $('analyzeBtn').disabled = !(selectedFile && $('level').value);
+    }
 
-        function handleFileSelect(file) {
-            selectedFile = file;
-            levelSelector.style.display = 'block';
-            result.style.display = 'none';
+    // ── Analizar ──────────────────────────────────────────────
+    $('analyzeBtn').addEventListener('click', async () => {
+      if (!selectedFile || !$('level').value) return;
 
-            // Show selected file name
-            uploadArea.innerHTML = `
-                <div class="upload-text">✅ Archivo seleccionado</div>
-                <div class="file-types">${file.name}</div>
-                <input type="file" id="fileInput" class="file-input" accept=".txt,.docx,.pdf,.jpg,.jpeg,.png,.bmp,.tiff">
-            `;
+      setLoading(true);
+      showStatus('Analizando con IA…', 'loading');
 
-            // Re-attach event listener to new file input
-            document.getElementById('fileInput').addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    handleFileSelect(e.target.files[0]);
-                }
-            });
-        }
+      const form = new FormData();
+      form.append('file',  selectedFile);
+      form.append('nivel', $('level').value);
 
-        // Level selection
-        document.querySelectorAll('.level-option').forEach(option => {
-            option.addEventListener('click', () => {
-                // Remove previous selection
-                document.querySelectorAll('.level-option').forEach(opt => {
-                    opt.classList.remove('selected');
-                });
+      try {
+        const resp = await fetch('/analizar', { method: 'POST', body: form });
+        const data = await resp.json();
+        if (!resp.ok) { showStatus('Error: ' + (data.error || resp.status), 'error'); return; }
+        renderResults(data);
+        showStatus(
+          data.analizado_con_ia ? '✓ Analizado con IA (Groq)' : '⚠️ Análisis automático (sin IA)',
+          data.analizado_con_ia ? 'info' : 'error'
+        );
+      } catch (e) {
+        showStatus('Error de conexión. Intenta nuevamente.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    });
 
-                // Select current option
-                option.classList.add('selected');
-                selectedLevel = option.dataset.level;
+    // ── Render resultados (mismo diseño que la extensión) ─────
+    function renderResults(data) {
+      const pct = Math.max(0, Math.min(100, data.porcentaje || 0));
+      const box = $('scoreBox');
 
-                // Show selected level info
-                selectedLevelInfo.textContent = `Nivel seleccionado: ${option.querySelector('.level-name').textContent}`;
-                selectedLevelInfo.style.display = 'block';
+      $('scoreNumber').textContent = pct + '%';
 
-                // Show analyze button
-                analyzeBtn.style.display = 'inline-block';
-            });
-        });
+      let cls, riskText;
+      if (pct >= 70)      { cls = 'risk-high'; riskText = 'Alto riesgo de IA'; }
+      else if (pct >= 35) { cls = 'risk-med';  riskText = 'Riesgo moderado'; }
+      else                { cls = 'risk-low';  riskText = 'Bajo riesgo'; }
 
-        analyzeBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
+      box.className = 'score-box ' + cls;
+      $('riskLabel').textContent  = riskText;
+      $('isAiLabel').textContent  = data.analizado_con_ia
+        ? '🤖 Posiblemente generado por IA'
+        : '✍️ Aparenta ser escrito por el estudiante';
 
-            if (!selectedFile || !selectedLevel) {
-                showError('Por favor selecciona un archivo y un nivel educativo');
-                return;
-            }
+      let html = '';
 
-            // Show loading
-            loading.style.display = 'block';
-            result.style.display = 'none';
-            analyzeBtn.disabled = true;
+      // Indicadores
+      if (data.indicadores?.length) {
+        html += `<div class="card"><div class="card-title">Indicadores detectados</div>`;
+        data.indicadores.forEach(i => { html += `<p>${esc(i)}</p>`; });
+        html += `</div>`;
+      }
 
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-            formData.append('nivel', selectedLevel);
+      // Adecuación al nivel
+      const adec = pct < 35 ? 'Baja ⚠️' : pct < 70 ? 'Media ≈' : 'Alta ✓';
+      html += `<div class="meta-row">
+        <span class="meta-key">Adecuación al nivel</span>
+        <span class="meta-val">${adec}</span>
+      </div>`;
 
-            try {
-                const response = await fetch('/analizar', {
-                    method: 'POST',
-                    body: formData
-                });
+      // Métricas
+      html += `<div class="meta-row">
+        <span class="meta-key">Longitud del texto</span>
+        <span class="meta-val">${data.longitud_texto ?? '—'} caracteres</span>
+      </div>`;
+      html += `<div class="meta-row">
+        <span class="meta-key">Densidad de vocabulario</span>
+        <span class="meta-val">${data.densidad_vocabulario ?? '—'}%</span>
+      </div>`;
 
-                const data = await response.json();
+      // Preguntas de validación
+      if (data.preguntas?.length) {
+        html += `<div class="card"><div class="card-title">Preguntas de validación</div>`;
+        data.preguntas.forEach(q => { html += `<div class="q-item">❓ ${esc(q)}</div>`; });
+        html += `</div>`;
+      }
 
-                if (response.ok) {
-                    displayResult(data);
-                } else {
-                    showError(data.error || 'Error al procesar el archivo');
-                }
-            } catch (error) {
-                showError('Error de conexión. Intenta nuevamente.');
-            } finally {
-                loading.style.display = 'none';
-                analyzeBtn.disabled = false;
-            }
-        });
+      $('details').innerHTML = html;
+      $('results').style.display = 'block';
+    }
 
-        function displayResult(data) {
-            filename.textContent = data.filename;
-
-            // Update AI badge
-            aiBadge.textContent = data.analizado_con_ia ? 'IA' : 'Fallback';
-            aiBadge.className = `ai-badge ${data.analizado_con_ia ? '' : 'fallback'}`;
-
-            // Update percentage circle
-            percentageCircle.textContent = `${data.porcentaje}%`;
-            percentageCircle.style.background = getColor(data.color);
-
-            // Update analysis type
-            if (data.analizado_con_ia) {
-                analysisType.className = 'analysis-type ai';
-                analysisTypeTitle.textContent = '🤖 Análisis con Inteligencia Artificial';
-                analysisTypeDescription.textContent = 'Este documento fue analizado usando Gemini AI, proporcionando una evaluación más precisa y detallada basada en múltiples criterios de análisis.';
-                document.getElementById('errorDetails').style.display = 'none';
-            } else {
-                analysisType.className = 'analysis-type fallback';
-                analysisTypeTitle.textContent = '⚙️ Análisis Automático (Fallback)';
-                analysisTypeDescription.textContent = 'Este documento fue analizado usando el sistema automático interno.';
-
-                // Mostrar detalles del error
-                const errorDetails = document.getElementById('errorDetails');
-                const errorMessage = document.getElementById('errorMessage');
-                errorDetails.style.display = 'block';
-                errorMessage.textContent = data.error_info || 'Error desconocido';
-            }
-
-            // Update indicators
-            indicators.innerHTML = '';
-            data.indicadores.forEach(indicator => {
-                const li = document.createElement('li');
-                li.textContent = indicator;
-                indicators.appendChild(li);
-            });
-
-            // Update metrics
-            metrics.innerHTML = '';
-            const metricItems = [
-                `Nivel educativo: ${getNivelDesc(data.nivel_educativo)}`,
-                `Porcentaje de sospecha: ${data.porcentaje}%`,
-                `Nivel de sospecha: ${data.label}`,
-                `Longitud del texto: ${data.longitud_texto || 'N/A'} caracteres`,
-                `Palabras únicas: ${data.palabras_unicas || 'N/A'}`,
-                `Densidad de vocabulario: ${data.densidad_vocabulario || 'N/A'}%`
-            ];
-
-            metricItems.forEach(metric => {
-                const li = document.createElement('li');
-                li.textContent = metric;
-                metrics.appendChild(li);
-            });
-
-            // Update questions
-            questions.innerHTML = '';
-            data.preguntas.forEach(question => {
-                const li = document.createElement('li');
-                li.textContent = question;
-                questions.appendChild(li);
-            });
-
-            result.style.display = 'block';
-        }
-
-        function getNivelDesc(nivel) {
-            const niveles = {
-                "basica-1-4": "Básica 1°-4°",
-                "basica-5-8": "Básica 5°-8°",
-                "medio-1-2": "Medio 1°-2°",
-                "medio-3-4": "Medio 3°-4°",
-                "superior": "Superior"
-            };
-            return niveles[nivel] || nivel;
-        }
-
-        function getColor(color) {
-            const colors = {
-                'green': 'linear-gradient(135deg, #28a745, #20c997)',
-                'yellow': 'linear-gradient(135deg, #ffc107, #fd7e14)',
-                'red': 'linear-gradient(135deg, #dc3545, #e83e8c)',
-                'gray': 'linear-gradient(135deg, #6c757d, #495057)'
-            };
-            return colors[color] || colors['gray'];
-        }
-
-        function showError(message) {
-            result.innerHTML = `<div class="error">❌ ${message}</div>`;
-            result.style.display = 'block';
-        }
-    </script>
+    // ── Helpers ───────────────────────────────────────────────
+    function setLoading(on) {
+      $('analyzeBtn').disabled    = on;
+      $('analyzeBtn').textContent = on ? 'Analizando…' : 'Analizar documento';
+    }
+    function showStatus(msg, type) {
+      const el = $('status');
+      el.textContent = msg;
+      el.className   = 'status ' + (type || '');
+    }
+    function hideStatus() {
+      $('status').className = 'status';
+    }
+    function fmtSize(b) {
+      if (b < 1024)    return b + ' B';
+      if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+      return (b / 1048576).toFixed(1) + ' MB';
+    }
+    function esc(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+  </script>
 </body>
-
 </html>
