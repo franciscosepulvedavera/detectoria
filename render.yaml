@@ -5,7 +5,7 @@ services:
     buildCommand: pip install --no-cache-dir -r requirements.txt
     startCommand: gunicorn --workers 4 --timeout 120 --access-logfile - wsgi:app
     envVars:
-      - key: GOOGLE_API_KEY
+      - key: GROQ_API_KEY
         sync: false
       - key: SECRET_KEY
         generateValue: true
