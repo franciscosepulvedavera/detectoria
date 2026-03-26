@@ -3,7 +3,7 @@ services:
     name: detectoria-backend
     env: python
     buildCommand: pip install --no-cache-dir -r requirements.txt
-    startCommand: cd backend && gunicorn --workers 4 --timeout 120 --access-logfile - app:app
+    startCommand: gunicorn --workers 4 --timeout 120 --access-logfile - wsgi:app
     envVars:
       - key: GOOGLE_API_KEY
         sync: false
